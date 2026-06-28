@@ -28,7 +28,8 @@ struct CentipedeApp: App {
 }
 
 struct GameView: View {
-    // Created once; SpriteView scales this fixed-size scene to fill the view.
+    #if os(macOS)
+    // Fixed 600×720 window on the Mac.
     @State private var scene: GameScene = {
         let scene = GameScene(size: CGSize(width: GameConfig.width, height: GameConfig.height))
         scene.scaleMode = .aspectFit
@@ -36,13 +37,29 @@ struct GameView: View {
     }()
 
     var body: some View {
-        #if os(macOS)
         SpriteView(scene: scene)
             .frame(width: GameConfig.width, height: GameConfig.height)
             .ignoresSafeArea()
-        #else
-        SpriteView(scene: scene)
-            .ignoresSafeArea()
-        #endif
     }
+    #else
+    // On iOS, size the field to the device's safe area so it fills the screen
+    // (and the HUD clears the Dynamic Island / home indicator).
+    @State private var scene: GameScene?
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()       // fill the notch / home-indicator insets
+            GeometryReader { geo in
+                Group {
+                    if let scene {
+                        SpriteView(scene: scene)
+                    }
+                }
+                .onAppear {
+                    if scene == nil { scene = GameScene.makeFilling(viewSize: geo.size) }
+                }
+            }
+        }
+    }
+    #endif
 }

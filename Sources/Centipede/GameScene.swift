@@ -169,6 +169,17 @@ final class GameScene: SKScene {
     /// A small soft dot reused as the particle image for explosions.
     private var sparkTexture: SKTexture!
 
+    /// Build a scene whose grid fills a view of `viewSize`: keep the column count
+    /// fixed and grow the row count to the view's aspect ratio, so `.aspectFit`
+    /// leaves (almost) no letterbox. Used on iOS where screens are very tall.
+    static func makeFilling(viewSize: CGSize) -> GameScene {
+        let aspect = viewSize.width > 0 ? viewSize.height / viewSize.width : 1.2
+        GameConfig.rows = min(52, max(30, Int((CGFloat(GameConfig.cols) * aspect).rounded())))
+        let scene = GameScene(size: CGSize(width: GameConfig.width, height: GameConfig.height))
+        scene.scaleMode = .aspectFit
+        return scene
+    }
+
     // MARK: Setup
 
     override func didMove(to view: SKView) {
@@ -243,9 +254,12 @@ final class GameScene: SKScene {
         // Keep the very top row (centipede spawn) and the player zone clear-ish.
         let topClear = 1
         let bottomClear = GameConfig.rows - GameConfig.playerRows
+        // Scale the count with field height so density stays constant on taller
+        // (phone) playfields.
+        let target = GameConfig.mushroomCount * GameConfig.rows / 30
         var placed = 0
         var attempts = 0
-        while placed < GameConfig.mushroomCount && attempts < 1000 {
+        while placed < target && attempts < target * 30 {
             attempts += 1
             let row = Int.random(in: topClear..<bottomClear)
             let col = Int.random(in: 0..<GameConfig.cols)
