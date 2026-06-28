@@ -1,0 +1,31 @@
+name: Release
+
+# Push a version tag to cut a release, e.g.:
+#   git tag v1.0.0 && git push origin v1.0.0
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write          # needed to create the GitHub Release
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Centipede.app
+        run: ./make_app.sh
+
+      # `ditto` preserves the bundle structure and code signature inside the zip.
+      - name: Zip the app
+        run: ditto -c -k --keepParent Centipede.app Centipede-macOS.zip
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" Centipede-macOS.zip \
+            --title "Centipede ${GITHUB_REF_NAME}" \
+            --generate-notes
