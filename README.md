@@ -4,9 +4,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A from-scratch recreation of the classic Atari arcade game **Centipede** for
-macOS, built in Swift with **SpriteKit** and packaged as a Swift Package (no
-`.xcodeproj` required). Centipede, spider, flea, scorpion, poison mushrooms,
-high scores, and an attract mode — all in code, no art assets.
+**macOS and iOS**, built in Swift with **SpriteKit** and **SwiftUI**. Centipede,
+spider, flea, scorpion, poison mushrooms, high scores, and an attract mode — all
+in code, no art assets. One shared codebase: mouse/keyboard on the Mac, touch
+(drag to aim, auto-fire) on iPhone/iPad.
 
 ## Install
 
@@ -23,6 +24,23 @@ xattr -dr com.apple.quarantine /Applications/Centipede.app
 ```
 
 **Build from source:** see below — requires Xcode or the Swift toolchain.
+
+## Build for iOS / iPad
+
+The same code runs on iOS via a generated Xcode project (SwiftPM can't run an
+iOS app, so iOS uses Xcode). The project is described declaratively in
+`project.yml` and generated with [XcodeGen](https://github.com/yonaskolb/XcodeGen):
+
+```sh
+brew install xcodegen     # one-time
+xcodegen generate         # creates Centipede.xcodeproj (git-ignored)
+open Centipede.xcodeproj   # pick an iOS Simulator (or your Mac) and Run
+```
+
+One app target builds for **both iOS and macOS** from the shared sources in
+`Sources/Centipede/`. On iOS: drag to aim the shooter (it rides above your
+finger) and it auto-fires; portrait only. (`sudo xcode-select -s /Applications/Xcode.app`
+first if `xcodebuild`/`xcodegen` can't find Xcode.)
 
 ## Run it
 
@@ -122,15 +140,19 @@ window to re-grab.
 
 ```
 Package.swift                 SwiftPM manifest (macOS executable)
+project.yml                   XcodeGen spec for the iOS + macOS app
 Sources/Centipede/
-  main.swift                  Hand-rolled AppKit bootstrap -> SKView -> GameScene
+  CentipedeApp.swift          SwiftUI @main entry (SpriteView) — both platforms
   GameConfig.swift            All tunable constants (grid size, speeds, counts)
   GameScene.swift             The game: entities, game loop, input, collisions, FX
   SoundEngine.swift           Runtime square-wave sound synthesis (AVAudioEngine)
   HighScores.swift            Top-10 high score store (persisted via UserDefaults)
 Tools/makeicon.swift          Core Graphics app-icon generator (no art assets)
-make_app.sh                   Packages everything into Centipede.app
+make_app.sh                   Packages the macOS build into Centipede.app
 ```
+
+Input is the only platform-specific layer (`#if os(macOS)` mouse/keyboard vs
+`#if os(iOS)` touch); the entire game simulation is shared.
 
 The game loop lives in `GameScene.update(_:)`: it polls the mouse, advances
 bullets every frame, ticks the centipede on a fixed interval, then resolves

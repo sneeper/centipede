@@ -1,6 +1,11 @@
 import SpriteKit
-import AppKit
 import CoreGraphics
+#if canImport(AppKit)
+import AppKit
+#endif
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // MARK: - Entities
 
@@ -130,7 +135,8 @@ final class GameScene: SKScene {
 
     // Game-over overlay + initials entry
     private var overlay: SKNode?
-    private var initials = ""
+    private var initialsSlots: [Character] = ["A", "A", "A"]
+    private var activeSlot = 0
 
     // Attract mode
     private var attractTimer: Double = 0   // countdown to the next attract transition
@@ -169,6 +175,7 @@ final class GameScene: SKScene {
         sparkTexture = makeSparkTexture()
         _ = SoundEngine.shared      // warm up the audio engine
 
+        #if os(macOS)
         // Release / re-grab the cursor automatically as the app loses/gains focus.
         NotificationCenter.default.addObserver(
             self, selector: #selector(appResignedActive),
@@ -183,6 +190,9 @@ final class GameScene: SKScene {
         NotificationCenter.default.addObserver(
             self, selector: #selector(fullScreenChanged),
             name: NSWindow.didExitFullScreenNotification, object: nil)
+        // The shooter is driven by relative mouse motion, so we need moved events.
+        view.window?.acceptsMouseMovedEvents = true
+        #endif
 
         enterAttractTitle()
     }
@@ -194,7 +204,8 @@ final class GameScene: SKScene {
     private func buildNewGame() {
         removeAllChildren()
         overlay = nil
-        initials = ""
+        initialsSlots = ["A", "A", "A"]
+        activeSlot = 0
         bullets.removeAll()
         chains.removeAll()
         phase = .playing
@@ -280,6 +291,7 @@ final class GameScene: SKScene {
         addChild(lives)
         livesNode = lives
 
+        #if os(macOS)
         let hint = SKLabelNode(fontNamed: "Menlo")
         hint.text = "Esc: free cursor"
         hint.fontSize = 11
@@ -291,6 +303,7 @@ final class GameScene: SKScene {
         addChild(hint)
         cursorHint = hint
         updateCursorHintVisibility()
+        #endif
 
         updateHUD()
     }
@@ -299,7 +312,11 @@ final class GameScene: SKScene {
     /// there's somewhere for it to go — i.e. not in full screen (and not during
     /// the demo, where the cursor is already free).
     private var isFullScreen: Bool {
+        #if os(macOS)
         view?.window?.styleMask.contains(.fullScreen) ?? false
+        #else
+        false
+        #endif
     }
 
     private func updateCursorHintVisibility() {
@@ -489,6 +506,10 @@ final class GameScene: SKScene {
 
         // Gameplay logic runs for a real round and for the AI demo.
         guard phase == .playing || phase == .attractDemo else { return }
+
+        #if os(iOS)
+        if phase == .playing { isFiring = true }   // touch control auto-fires
+        #endif
 
         updatePlayer(dt)
         updateFiring(dt)
@@ -1170,7 +1191,8 @@ final class GameScene: SKScene {
         }
         if HighScores.shared.qualifies(score) {
             phase = .enteringInitials
-            initials = ""
+            initialsSlots = ["A", "A", "A"]
+            activeSlot = 0
             showInitialsEntry()
         } else {
             phase = .showingScores
@@ -1239,28 +1261,52 @@ final class GameScene: SKScene {
         }
     }
 
+    /// A tappable button (rounded rect + glyph). The rect carries the `name`
+    /// used for hit-testing.
+    private func makeButton(_ glyph: String, name: String, at p: CGPoint, width: CGFloat = 50) -> SKNode {
+        let bg = SKShapeNode(rectOf: CGSize(width: width, height: 44), cornerRadius: 8)
+        bg.fillColor = SKColor(white: 1, alpha: 0.10)
+        bg.strokeColor = SKColor(white: 1, alpha: 0.3)
+        bg.position = p
+        bg.zPosition = 152
+        bg.name = name
+        let label = SKLabelNode(fontNamed: "Menlo-Bold")
+        label.text = glyph
+        label.fontSize = 24
+        label.fontColor = .white
+        label.verticalAlignmentMode = .center
+        label.horizontalAlignmentMode = .center
+        bg.addChild(label)
+        return bg
+    }
+
     private func showInitialsEntry() {
         let node = makeGameOverOverlay()
         node.addChild(overlayLabel("NEW HIGH SCORE!", size: 24,
                                    color: SKColor(red: 1, green: 0.9, blue: 0.3, alpha: 1),
                                    y: size.height - 245))
         node.addChild(overlayLabel("ENTER YOUR INITIALS", size: 18, color: .white,
-                                   y: size.height / 2 + 40))
+                                   y: size.height / 2 + 90))
 
-        // Three slots; the active one is highlighted.
-        let chars = Array(initials)
+        let cy = size.height / 2 + 5
         for i in 0..<3 {
-            let glyph = i < chars.count ? String(chars[i]) : "_"
-            let active = (i == chars.count)
-            let slot = overlayLabel(glyph, size: 56,
-                                    color: active ? SKColor(red: 1, green: 0.9, blue: 0.3, alpha: 1) : .white,
-                                    y: size.height / 2 - 30)
-            slot.position.x = size.width / 2 + CGFloat(i - 1) * 56
-            node.addChild(slot)
+            let x = size.width / 2 + CGFloat(i - 1) * 72
+            node.addChild(makeButton("▲", name: "up\(i)", at: CGPoint(x: x, y: cy + 58)))
+            node.addChild(makeButton("▼", name: "down\(i)", at: CGPoint(x: x, y: cy - 58)))
+            let letter = overlayLabel(String(initialsSlots[i]), size: 52,
+                                      color: i == activeSlot ? SKColor(red: 1, green: 0.9, blue: 0.3, alpha: 1) : .white,
+                                      y: cy)
+            letter.position.x = x
+            node.addChild(letter)
         }
+        node.addChild(makeButton("OK", name: "ok", at: CGPoint(x: size.width / 2, y: cy - 130), width: 90))
 
-        node.addChild(overlayLabel("Type A–Z   ·   Delete to fix   ·   Return to confirm",
-                                   size: 14, color: SKColor(white: 0.7, alpha: 1), y: 80))
+        #if os(macOS)
+        let help = "Tap ▲ ▼ or type · OK / Return to confirm"
+        #else
+        let help = "Tap ▲ ▼ to set each letter · OK to confirm"
+        #endif
+        node.addChild(overlayLabel(help, size: 13, color: SKColor(white: 0.7, alpha: 1), y: 70))
     }
 
     private func showHighScoreTable(highlightIndex: Int?) {
@@ -1276,11 +1322,7 @@ final class GameScene: SKScene {
     }
 
     private func commitInitials() {
-        let entered = initials.isEmpty ? "AAA" : initials
-        let padded = entered.count < 3
-            ? entered.padding(toLength: 3, withPad: " ", startingAt: 0)
-            : entered
-        let index = HighScores.shared.add(initials: padded, score: score)
+        let index = HighScores.shared.add(initials: String(initialsSlots), score: score)
         phase = .showingScores
         showHighScoreTable(highlightIndex: index)
     }
@@ -1431,21 +1473,26 @@ final class GameScene: SKScene {
     /// window mid-game. The shooter is then driven by relative mouse motion —
     /// which also matches the original's trackball feel.
     private func captureMouse() {
+        #if os(macOS)
         guard !mouseCaptured else { return }
         CGAssociateMouseAndMouseCursorPosition(0)   // decouple cursor from the mouse
         NSCursor.hide()
         mouseCaptured = true
         updateCursorHintVisibility()
+        #endif
     }
 
     private func releaseMouse() {
+        #if os(macOS)
         guard mouseCaptured else { return }
         CGAssociateMouseAndMouseCursorPosition(1)
         NSCursor.unhide()
         mouseCaptured = false
         updateCursorHintVisibility()
+        #endif
     }
 
+    #if os(macOS)
     @objc private func appResignedActive() {
         releaseMouse()   // hand the cursor back when the user switches away
     }
@@ -1457,8 +1504,48 @@ final class GameScene: SKScene {
     @objc private func fullScreenChanged() {
         updateCursorHintVisibility()
     }
+    #endif
 
-    // MARK: Input
+    // MARK: Input (shared)
+
+    /// A primary tap (mouse click on macOS, touch on iOS) on the non-gameplay
+    /// screens. Returns true if it was consumed by UI.
+    @discardableResult
+    private func handlePrimaryTap(at p: CGPoint) -> Bool {
+        switch phase {
+        case .attractTitle, .attractScores, .attractDemo, .showingScores:
+            startGame()
+            return true
+        case .enteringInitials:
+            handleInitialsTap(at: p)
+            return true
+        case .playing:
+            return false
+        }
+    }
+
+    /// Hit-test the initials selector (▲ / ▼ / OK buttons) at a point.
+    private func handleInitialsTap(at p: CGPoint) {
+        for node in nodes(at: p) {
+            guard let name = node.name ?? node.parent?.name else { continue }
+            if name == "ok" { commitInitials(); return }
+            if name.hasPrefix("up"), let i = Int(name.dropFirst(2)) { cycleSlot(i, by: 1); return }
+            if name.hasPrefix("down"), let i = Int(name.dropFirst(4)) { cycleSlot(i, by: -1); return }
+        }
+    }
+
+    private let alphabet = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+    private func cycleSlot(_ i: Int, by delta: Int) {
+        guard i >= 0, i < 3 else { return }
+        activeSlot = i
+        let idx = alphabet.firstIndex(of: initialsSlots[i]) ?? 0
+        initialsSlots[i] = alphabet[((idx + delta) % 26 + 26) % 26]
+        showInitialsEntry()
+    }
+
+    #if os(macOS)
+    // MARK: Input (macOS — mouse + keyboard)
 
     override func mouseDown(with event: NSEvent) {
         switch phase {
@@ -1469,10 +1556,8 @@ final class GameScene: SKScene {
             } else {
                 captureMouse()         // click back in to re-grab the cursor (no shot)
             }
-        case .attractTitle, .attractScores, .attractDemo, .showingScores:
-            startGame()
-        case .enteringInitials:
-            break                      // must type initials first
+        default:
+            handlePrimaryTap(at: event.location(in: self))
         }
     }
 
@@ -1519,20 +1604,48 @@ final class GameScene: SKScene {
 
     private func handleInitialsKey(_ event: NSEvent) {
         switch event.keyCode {
-        case 51:               // delete / backspace
-            if !initials.isEmpty {
-                initials.removeLast()
-                showInitialsEntry()
-            }
-        case 36, 76:           // return / enter
-            commitInitials()
+        case 36, 76: commitInitials()                                   // return / enter
+        case 123: activeSlot = max(0, activeSlot - 1); showInitialsEntry()   // ←
+        case 124: activeSlot = min(2, activeSlot + 1); showInitialsEntry()   // →
+        case 126: cycleSlot(activeSlot, by: 1)                          // ↑
+        case 125: cycleSlot(activeSlot, by: -1)                         // ↓
         default:
-            if let c = event.charactersIgnoringModifiers?.first, c.isLetter, initials.count < 3 {
-                initials.append(Character(c.uppercased()))
+            if let ch = event.charactersIgnoringModifiers?.first, ch.isLetter {
+                initialsSlots[activeSlot] = Character(ch.uppercased())
+                if activeSlot < 2 { activeSlot += 1 }
                 showInitialsEntry()
             }
         }
     }
+    #endif
+
+    #if os(iOS)
+    // MARK: Input (iOS — touch)
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let t = touches.first else { return }
+        let p = t.location(in: self)
+        if handlePrimaryTap(at: p) { return }
+        moveGunToTouch(p)
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard phase == .playing, let t = touches.first else { return }
+        moveGunToTouch(t.location(in: self))
+    }
+
+    /// Place the shooter at the finger's x, lifted above the fingertip so the
+    /// finger doesn't cover it, clamped to the bottom play zone.
+    private func moveGunToTouch(_ p: CGPoint) {
+        guard player != nil else { return }
+        let half = GameConfig.cell * 0.4
+        let minY = GameConfig.cell * 0.5
+        let maxY = CGFloat(GameConfig.playerRows) * GameConfig.cell
+        let x = min(max(p.x, half), size.width - half)
+        let y = min(max(p.y + GameConfig.cell * 2.5, minY), maxY)
+        player.position = CGPoint(x: x, y: y)
+    }
+    #endif
 
     // MARK: Effects
 
@@ -1588,15 +1701,20 @@ final class GameScene: SKScene {
     }
 
     /// Build a small white dot texture in code (no image assets) to use as the
-    /// particle for explosions.
+    /// particle for explosions. Drawn via Core Graphics so it works on both
+    /// macOS (AppKit) and iOS (UIKit).
     private func makeSparkTexture() -> SKTexture {
-        let d: CGFloat = 8
-        let image = NSImage(size: NSSize(width: d, height: d), flipped: false) { rect in
-            SKColor.white.setFill()
-            NSBezierPath(ovalIn: rect).fill()
-            return true
+        let d = 8
+        let cs = CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(data: nil, width: d, height: d, bitsPerComponent: 8,
+                                  bytesPerRow: 0, space: cs,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+            return SKTexture()
         }
-        return SKTexture(image: image)
+        ctx.setFillColor(SKColor.white.cgColor)
+        ctx.fillEllipse(in: CGRect(x: 0, y: 0, width: d, height: d))
+        guard let image = ctx.makeImage() else { return SKTexture() }
+        return SKTexture(cgImage: image)
     }
 
     /// Fire off a one-shot particle burst that emits `count` sparks then removes

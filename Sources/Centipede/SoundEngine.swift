@@ -37,6 +37,17 @@ final class SoundEngine {
 
         renderBuffers()
 
+        #if os(iOS)
+        // iOS needs an active audio session or AVAudioEngine stays silent.
+        // .ambient mixes politely and respects the hardware mute switch.
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("SoundEngine: audio session setup failed — \(error)")
+        }
+        #endif
+
         do {
             try engine.start()
             players.forEach { $0.play() }

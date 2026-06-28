@@ -1,0 +1,51 @@
+# XcodeGen spec for the multiplatform Centipede app (iOS + macOS).
+#
+# Generate the Xcode project with:
+#     brew install xcodegen      # one-time
+#     xcodegen generate
+#     open Centipede.xcodeproj
+#
+# The generated Centipede.xcodeproj is disposable (git-ignored) — regenerate it
+# anytime from this file. One app target builds for both iOS and macOS from the
+# shared sources in Sources/Centipede/ (entry point: CentipedeApp.swift).
+
+name: Centipede
+options:
+  bundleIdPrefix: io.github.sneeper
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "16.0"
+    macOS: "13.0"
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+
+targets:
+  Centipede:
+    type: application
+    supportedDestinations: [iOS, macOS]
+    sources:
+      - Sources/Centipede
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.sneeper.centipede
+        PRODUCT_NAME: Centipede
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Centipede
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.games
+        # iOS: portrait, no status bar (matches the portrait playfield).
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIStatusBarHidden: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        CODE_SIGN_STYLE: Automatic
+
+schemes:
+  Centipede:
+    build:
+      targets:
+        Centipede: all
+    run:
+      config: Debug
