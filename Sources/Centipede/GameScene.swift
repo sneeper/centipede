@@ -88,6 +88,7 @@ enum GamePhase {
     case attractScores      // attract: high score table
     case attractDemo        // attract: AI-driven demo round (no sound, no recording)
     case playing
+    case paused             // gameplay frozen behind a pause menu
     case enteringInitials   // qualified for the table; typing initials
     case showingScores      // post-game high score table; click to play again
 }
@@ -303,6 +304,15 @@ final class GameScene: SKScene {
         addChild(hint)
         cursorHint = hint
         updateCursorHintVisibility()
+        #endif
+
+        #if os(iOS)
+        // A visible Pause button (top-right) — the obvious in-app exit on touch.
+        let pauseButton = makeButton("PAUSE", name: "pause",
+                                     at: CGPoint(x: size.width - 54, y: size.height - 30),
+                                     width: 84, fontSize: 15)
+        pauseButton.zPosition = 100
+        addChild(pauseButton)
         #endif
 
         updateHUD()
@@ -1263,7 +1273,7 @@ final class GameScene: SKScene {
 
     /// A tappable button (rounded rect + glyph). The rect carries the `name`
     /// used for hit-testing.
-    private func makeButton(_ glyph: String, name: String, at p: CGPoint, width: CGFloat = 50) -> SKNode {
+    private func makeButton(_ glyph: String, name: String, at p: CGPoint, width: CGFloat = 50, fontSize: CGFloat = 24) -> SKNode {
         let bg = SKShapeNode(rectOf: CGSize(width: width, height: 44), cornerRadius: 8)
         bg.fillColor = SKColor(white: 1, alpha: 0.10)
         bg.strokeColor = SKColor(white: 1, alpha: 0.3)
@@ -1272,7 +1282,7 @@ final class GameScene: SKScene {
         bg.name = name
         let label = SKLabelNode(fontNamed: "Menlo-Bold")
         label.text = glyph
-        label.fontSize = 24
+        label.fontSize = fontSize
         label.fontColor = .white
         label.verticalAlignmentMode = .center
         label.horizontalAlignmentMode = .center
@@ -1519,9 +1529,53 @@ final class GameScene: SKScene {
         case .enteringInitials:
             handleInitialsTap(at: p)
             return true
+        case .paused:
+            handlePauseTap(at: p)
+            return true
         case .playing:
             return false
         }
+    }
+
+    /// First named node (or its parent) under a point — used for button hit-tests.
+    private func hitName(at p: CGPoint) -> String? {
+        for node in nodes(at: p) {
+            if let n = node.name ?? node.parent?.name { return n }
+        }
+        return nil
+    }
+
+    // MARK: Pause
+
+    private func pauseGame() {
+        guard phase == .playing else { return }
+        phase = .paused
+        isFiring = false
+        showPauseOverlay()
+    }
+
+    private func resumeGame() {
+        guard phase == .paused else { return }
+        overlay?.removeFromParent()
+        overlay = nil
+        phase = .playing
+    }
+
+    private func handlePauseTap(at p: CGPoint) {
+        switch hitName(at: p) {
+        case "resume": resumeGame()
+        case "quit":   enterAttractTitle()   // back to the title screen
+        default:       break
+        }
+    }
+
+    private func showPauseOverlay() {
+        let node = makeOverlayContainer()
+        node.addChild(overlayLabel("PAUSED", size: 44, color: .white, y: size.height / 2 + 80))
+        node.addChild(makeButton("RESUME", name: "resume",
+                                  at: CGPoint(x: size.width / 2, y: size.height / 2), width: 220, fontSize: 22))
+        node.addChild(makeButton("QUIT", name: "quit",
+                                  at: CGPoint(x: size.width / 2, y: size.height / 2 - 70), width: 220, fontSize: 22))
     }
 
     /// Hit-test the initials selector (▲ / ▼ / OK buttons) at a point.
@@ -1626,6 +1680,7 @@ final class GameScene: SKScene {
         guard let t = touches.first else { return }
         let p = t.location(in: self)
         if handlePrimaryTap(at: p) { return }
+        if hitName(at: p) == "pause" { pauseGame(); return }
         moveGunToTouch(p)
     }
 
