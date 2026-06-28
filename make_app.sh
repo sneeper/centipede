@@ -30,9 +30,8 @@ cp "$BIN" "$APPDIR/Contents/MacOS/$APP"
 echo "==> Generating icon..."
 WORK="$(mktemp -d)"
 ICONSET="$WORK/$APP.iconset"
-MASTER="$WORK/icon_1024.png"
+MASTER="Resources/AppIcon.png"      # the committed 1024 master image
 mkdir -p "$ICONSET"
-swift Tools/makeicon.swift "$MASTER"
 
 # Downscale the master into every size iconutil expects.
 sip() { sips -z "$1" "$1" "$MASTER" --out "$ICONSET/$2" >/dev/null; }

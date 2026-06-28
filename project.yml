@@ -29,10 +29,12 @@ targets:
     supportedDestinations: [iOS, macOS]
     sources:
       - Sources/Centipede
+      - Resources/Assets.xcassets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.sneeper.centipede
         PRODUCT_NAME: Centipede
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Centipede
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.games

@@ -6,8 +6,8 @@
 A from-scratch recreation of the classic Atari arcade game **Centipede** for
 **macOS and iOS**, built in Swift with **SpriteKit** and **SwiftUI**. Centipede,
 spider, flea, scorpion, poison mushrooms, high scores, and an attract mode — all
-in code, no art assets. One shared codebase: mouse/keyboard on the Mac, touch
-(drag to aim, auto-fire) on iPhone/iPad.
+in code (the only art asset is the app icon). One shared codebase: mouse/keyboard
+on the Mac, touch (drag to aim, auto-fire) on iPhone/iPad.
 
 ## Install
 
@@ -70,9 +70,8 @@ To get a double-clickable `Centipede.app` with an icon that you can keep in
 cp -R Centipede.app /Applications/
 ```
 
-`make_app.sh` compiles a release binary, generates a Core Graphics app icon
-(`Tools/makeicon.swift` → `.icns`, no art files needed), writes a proper
-`Info.plist`, and ad-hoc code-signs the bundle. Because it's built locally and
+`make_app.sh` compiles a release binary, turns `Resources/AppIcon.png` into the
+macOS `.icns`, writes a proper `Info.plist`, and ad-hoc code-signs the bundle. Because it's built locally and
 never quarantined, it launches without Gatekeeper prompts. (Note: as a bundled
 app it stores high scores under its bundle id, so scores from `swift run` won't
 carry over.)
@@ -147,8 +146,9 @@ Sources/Centipede/
   GameScene.swift             The game: entities, game loop, input, collisions, FX
   SoundEngine.swift           Runtime square-wave sound synthesis (AVAudioEngine)
   HighScores.swift            Top-10 high score store (persisted via UserDefaults)
-Tools/makeicon.swift          Core Graphics app-icon generator (no art assets)
+Tools/makeicons.sh            Regenerates the iOS/macOS icon asset catalog
 make_app.sh                   Packages the macOS build into Centipede.app
+Resources/AppIcon.png         App icon master (1024²); see Tools/makeicons.sh
 ```
 
 Input is the only platform-specific layer (`#if os(macOS)` mouse/keyboard vs
