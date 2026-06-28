@@ -30,6 +30,9 @@ targets:
     sources:
       - Sources/Centipede
       - Resources/Assets.xcassets
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.sneeper.centipede

@@ -42,6 +42,15 @@ One app target builds for **both iOS and macOS** from the shared sources in
 finger) and it auto-fires; portrait only. (`sudo xcode-select -s /Applications/Xcode.app`
 first if `xcodebuild`/`xcodegen` can't find Xcode.)
 
+To run on a device, signing needs your Apple Developer **Team ID**. Copy
+`Signing.xcconfig.example` to `Signing.xcconfig` (git-ignored) and set
+`DEVELOPMENT_TEAM`; the generated project reads it, so it survives
+`xcodegen generate`:
+
+```sh
+cp Signing.xcconfig.example Signing.xcconfig   # then edit in your Team ID
+```
+
 ## Run it
 
 From this folder:

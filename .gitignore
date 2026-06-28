@@ -4,3 +4,4 @@
 *.xcodeproj
 xcuserdata/
 /Centipede.app
+Signing.xcconfig

@@ -1,0 +1,5 @@
+// Copy this file to "Signing.xcconfig" and set your 10-character Apple
+// Developer Team ID. That file is git-ignored, so your team id stays local
+// and survives `xcodegen generate`. Find your Team ID in Xcode →
+// Settings → Accounts → (your account), or at developer.apple.com → Membership.
+DEVELOPMENT_TEAM =
