@@ -7,10 +7,10 @@ enum GameConfig {
     /// Size of one grid cell, in points.
     static let cell: CGFloat = 24
 
-    /// Playfield dimensions, in cells. `rows` is adjusted at launch to match the
-    /// device's aspect ratio (see GameScene.makeFilling) so the field fills the
-    /// screen; 30 is the default (and what macOS uses).
-    static let cols = 25
+    /// Playfield dimensions, in cells. Both are adjusted at launch on iOS (see
+    /// GameScene.makeFilling) to fit the device with a chunky cell size; 25×30 is
+    /// the default (and what macOS uses).
+    static var cols = 25
     static var rows = 30
 
     /// How many rows at the bottom the player's shooter is allowed to roam.

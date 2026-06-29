@@ -169,12 +169,15 @@ final class GameScene: SKScene {
     /// A small soft dot reused as the particle image for explosions.
     private var sparkTexture: SKTexture!
 
-    /// Build a scene whose grid fills a view of `viewSize`: keep the column count
-    /// fixed and grow the row count to the view's aspect ratio, so `.aspectFit`
-    /// leaves (almost) no letterbox. Used on iOS where screens are very tall.
+    /// Build a scene sized to fill `viewSize`. Pick a column count for a chunky
+    /// ~24pt on-screen cell, then a row count to fill the height. Fewer, bigger
+    /// cells → larger, clearer, more detailed sprites (used on iOS).
     static func makeFilling(viewSize: CGSize) -> GameScene {
-        let aspect = viewSize.width > 0 ? viewSize.height / viewSize.width : 1.2
-        GameConfig.rows = min(60, max(30, Int((CGFloat(GameConfig.cols) * aspect).rounded())))
+        let w = viewSize.width, h = viewSize.height
+        let targetCell: CGFloat = 24
+        GameConfig.cols = w > 0 ? min(20, max(14, Int((w / targetCell).rounded()))) : 16
+        let aspect = w > 0 ? h / w : 1.6
+        GameConfig.rows = min(44, max(24, Int((CGFloat(GameConfig.cols) * aspect).rounded())))
         let scene = GameScene(size: CGSize(width: GameConfig.width, height: GameConfig.height))
         scene.scaleMode = .aspectFit
         return scene
@@ -254,9 +257,9 @@ final class GameScene: SKScene {
         // Keep the very top row (centipede spawn) and the player zone clear-ish.
         let topClear = 1
         let bottomClear = GameConfig.rows - GameConfig.playerRows
-        // Scale the count with field height so density stays constant on taller
-        // (phone) playfields.
-        let target = GameConfig.mushroomCount * GameConfig.rows / 30
+        // Scale the count with the playfield area so density stays constant
+        // across grid sizes (baseline is the 25×30 macOS field).
+        let target = GameConfig.mushroomCount * GameConfig.cols * GameConfig.rows / (25 * 30)
         var placed = 0
         var attempts = 0
         while placed < target && attempts < target * 30 {
@@ -449,14 +452,36 @@ final class GameScene: SKScene {
     }
 
     private func makeSegmentNode(isHead: Bool) -> SKShapeNode {
-        let node = SKShapeNode(circleOfRadius: GameConfig.cell * 0.42)
-        let color = isHead ? wavePalette.head : wavePalette.body
-        node.fillColor = color
-        node.strokeColor = color
+        let r = GameConfig.cell * 0.5
+        let node = SKShapeNode(circleOfRadius: r)
         node.lineWidth = 1
         node.glowWidth = 3               // neon halo
         node.zPosition = 5
+
+        // Little legs down each side so the train reads as a centipede.
+        let legs = SKShapeNode()
+        legs.name = "legs"
+        let path = CGMutablePath()
+        let legLen = r * 0.55
+        for i in 0..<2 {
+            let y = (CGFloat(i) - 0.5) * r * 0.7
+            path.move(to: CGPoint(x: -r * 0.6, y: y)); path.addLine(to: CGPoint(x: -(r + legLen), y: y - legLen * 0.3))
+            path.move(to: CGPoint(x:  r * 0.6, y: y)); path.addLine(to: CGPoint(x:  (r + legLen), y: y - legLen * 0.3))
+        }
+        legs.path = path
+        legs.lineWidth = 2
+        legs.zPosition = -1
+        node.addChild(legs)
+
+        tintSegment(node, isHead ? wavePalette.head : wavePalette.body)
         return node
+    }
+
+    /// Recolor a segment's body and its legs together.
+    private func tintSegment(_ node: SKShapeNode, _ color: SKColor) {
+        node.fillColor = color
+        node.strokeColor = color
+        (node.childNode(withName: "legs") as? SKShapeNode)?.strokeColor = color
     }
 
     // MARK: Coordinate helpers
@@ -482,15 +507,33 @@ final class GameScene: SKScene {
 
     private func addMushroom(col: Int, row: Int, health: Int = GameConfig.mushroomHealth) {
         guard inGrid(col: col, row: row), mushrooms[row][col] == nil else { return }
-        let s = GameConfig.cell * 0.72
-        let node = SKShapeNode(rectOf: CGSize(width: s, height: s), cornerRadius: 5)
+        let node = SKShapeNode(path: mushroomPath())
         node.position = point(col: col, row: row)
         node.strokeColor = .clear
+        node.lineWidth = 0
         node.zPosition = 1
         addChild(node)
         let m = Mushroom(health: health, node: node)
         m.node.fillColor = mushroomColor(for: health)
         mushrooms[row][col] = m
+    }
+
+    /// A little mushroom silhouette (domed cap on a stem), centered on the origin.
+    private func mushroomPath() -> CGPath {
+        let c = GameConfig.cell
+        let stem = c * 0.16     // stem half-width
+        let cap = c * 0.40      // cap half-width
+        let base = -c * 0.34    // bottom of the stem
+        let neck = -c * 0.04    // where the cap meets the stem
+        let p = CGMutablePath()
+        p.move(to: CGPoint(x: -stem, y: base))
+        p.addLine(to: CGPoint(x: -stem, y: neck))
+        p.addLine(to: CGPoint(x: -cap, y: neck))
+        p.addQuadCurve(to: CGPoint(x: cap, y: neck), control: CGPoint(x: 0, y: c * 0.62))  // domed cap
+        p.addLine(to: CGPoint(x: stem, y: neck))
+        p.addLine(to: CGPoint(x: stem, y: base))
+        p.closeSubpath()
+        return p
     }
 
     private func mushroomColor(for health: Int, poisoned: Bool = false) -> SKColor {
@@ -1089,8 +1132,7 @@ final class GameScene: SKScene {
 
     private func recolorHead(of chain: [Segment]) {
         guard let head = chain.first else { return }
-        head.node.fillColor = wavePalette.head
-        head.node.strokeColor = wavePalette.head
+        tintSegment(head.node, wavePalette.head)
     }
 
     /// Recolor all live mushrooms and centipede links to the current wave palette
@@ -1098,9 +1140,7 @@ final class GameScene: SKScene {
     private func applyWavePalette() {
         for chain in chains {
             for (i, seg) in chain.enumerated() {
-                let color = (i == 0) ? wavePalette.head : wavePalette.body
-                seg.node.fillColor = color
-                seg.node.strokeColor = color
+                tintSegment(seg.node, (i == 0) ? wavePalette.head : wavePalette.body)
             }
         }
         for r in 0..<GameConfig.rows {
