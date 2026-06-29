@@ -290,18 +290,26 @@ final class GameScene: SKScene {
     }
 
     private func buildHUD() {
+        // On iOS, inset the HUD from the top so it clears the Dynamic Island and
+        // the top-edge Control Center swipe zone (the Pause button lives here).
+        #if os(iOS)
+        let top = size.height - GameConfig.cell * 5
+        #else
+        let top = size.height
+        #endif
+
         let label = SKLabelNode(fontNamed: "Menlo-Bold")
         label.fontSize = 18
         label.fontColor = .white
         label.horizontalAlignmentMode = .left
         label.verticalAlignmentMode = .top
-        label.position = CGPoint(x: 12, y: size.height - 10)
+        label.position = CGPoint(x: 12, y: top - 10)
         label.zPosition = 100
         addChild(label)
         scoreLabel = label
 
         let lives = SKNode()
-        lives.position = CGPoint(x: 16, y: size.height - 40)
+        lives.position = CGPoint(x: 16, y: top - 40)
         lives.zPosition = 100
         addChild(lives)
         livesNode = lives
@@ -321,9 +329,9 @@ final class GameScene: SKScene {
         #endif
 
         #if os(iOS)
-        // A visible Pause button (top-right) — the obvious in-app exit on touch.
+        // A visible Pause button (top-right, below the Control Center zone).
         let pauseButton = makeButton("PAUSE", name: "pause",
-                                     at: CGPoint(x: size.width - 54, y: size.height - 30),
+                                     at: CGPoint(x: size.width - 54, y: top - 30),
                                      width: 84, fontSize: 15)
         pauseButton.zPosition = 100
         addChild(pauseButton)
@@ -671,12 +679,11 @@ final class GameScene: SKScene {
         spiderSpawnTimer = Double.random(in: GameConfig.spiderMinSpawn...GameConfig.spiderMaxSpawn)
     }
 
-    /// The vertical band the spider roams: from ~10% to ~40% of the field height.
-    /// Keeping the floor well off the bottom (not just the ceiling high) stops it
-    /// hugging the ground given its erratic, short-hop movement.
+    /// The vertical band the spider roams: from ~5% to ~42% of the field height,
+    /// so it sweeps down into the gun's area and back up.
     private var spiderBand: (min: CGFloat, max: CGFloat) {
         let h = CGFloat(GameConfig.rows) * GameConfig.cell
-        return (h * 0.10, h * 0.40)
+        return (h * 0.05, h * 0.42)
     }
 
     private func updateSpider(_ dt: Double) {
@@ -699,7 +706,7 @@ final class GameScene: SKScene {
         s.nextFlip -= dt
         if s.nextFlip <= 0 {
             s.vy = -s.vy
-            s.nextFlip = Double.random(in: 0.2...0.6)
+            s.nextFlip = Double.random(in: 0.5...1.1)
         }
 
         // Eat any mushroom it crosses.
@@ -730,7 +737,7 @@ final class GameScene: SKScene {
 
         let vx = (fromLeft ? 1 : -1) * GameConfig.spiderSpeedX
         let vy = (Bool.random() ? 1 : -1) * GameConfig.spiderSpeedY
-        spider = Spider(node: node, vx: vx, vy: vy, nextFlip: Double.random(in: 0.2...0.6))
+        spider = Spider(node: node, vx: vx, vy: vy, nextFlip: Double.random(in: 0.5...1.1))
     }
 
     /// Shooting the spider scores by proximity, classic-style: closer = more.

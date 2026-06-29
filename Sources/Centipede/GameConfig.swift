@@ -33,7 +33,7 @@ enum GameConfig {
 
     // Spider.
     static let spiderSpeedX: CGFloat = 130     // horizontal drift, points/second
-    static let spiderSpeedY: CGFloat = 175     // vertical bounce, points/second
+    static let spiderSpeedY: CGFloat = 205     // vertical bounce, points/second
     static let spiderMinSpawn: Double = 5      // seconds between spiders (min)
     static let spiderMaxSpawn: Double = 9      // seconds between spiders (max)
 
