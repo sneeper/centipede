@@ -671,10 +671,12 @@ final class GameScene: SKScene {
         spiderSpawnTimer = Double.random(in: GameConfig.spiderMinSpawn...GameConfig.spiderMaxSpawn)
     }
 
-    /// The vertical band the spider is allowed to roam: the player zone plus a
-    /// little headroom above it.
+    /// The vertical band the spider roams: from ~10% to ~40% of the field height.
+    /// Keeping the floor well off the bottom (not just the ceiling high) stops it
+    /// hugging the ground given its erratic, short-hop movement.
     private var spiderBand: (min: CGFloat, max: CGFloat) {
-        (GameConfig.cell * 0.6, CGFloat(GameConfig.playerRows + 1) * GameConfig.cell)
+        let h = CGFloat(GameConfig.rows) * GameConfig.cell
+        return (h * 0.10, h * 0.40)
     }
 
     private func updateSpider(_ dt: Double) {
