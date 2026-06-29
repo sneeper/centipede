@@ -1703,15 +1703,18 @@ final class GameScene: SKScene {
         moveGunToTouch(t.location(in: self))
     }
 
-    /// Place the shooter at the finger's x, lifted above the fingertip so the
-    /// finger doesn't cover it, clamped to the bottom play zone.
+    /// Place the shooter at the finger's x/y. The gun floats above the fingertip
+    /// so your thumb doesn't cover it — but the float tapers to zero as the finger
+    /// nears the bottom, so you can still drag the gun all the way down (e.g. to
+    /// get right under the spider for close-range points).
     private func moveGunToTouch(_ p: CGPoint) {
         guard player != nil else { return }
         let half = GameConfig.cell * 0.4
         let minY = GameConfig.cell * 0.5
-        let maxY = CGFloat(GameConfig.playerRows) * GameConfig.cell
+        let maxY = CGFloat(GameConfig.playerRows + 6) * GameConfig.cell
         let x = min(max(p.x, half), size.width - half)
-        let y = min(max(p.y + GameConfig.cell * 2.5, minY), maxY)
+        let lift = min(GameConfig.cell * 5, max(0, p.y))   // 0 at the bottom → full float higher up
+        let y = min(max(p.y + lift, minY), maxY)
         player.position = CGPoint(x: x, y: y)
     }
     #endif
