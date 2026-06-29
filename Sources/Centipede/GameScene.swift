@@ -174,7 +174,7 @@ final class GameScene: SKScene {
     /// leaves (almost) no letterbox. Used on iOS where screens are very tall.
     static func makeFilling(viewSize: CGSize) -> GameScene {
         let aspect = viewSize.width > 0 ? viewSize.height / viewSize.width : 1.2
-        GameConfig.rows = min(52, max(30, Int((CGFloat(GameConfig.cols) * aspect).rounded())))
+        GameConfig.rows = min(60, max(30, Int((CGFloat(GameConfig.cols) * aspect).rounded())))
         let scene = GameScene(size: CGSize(width: GameConfig.width, height: GameConfig.height))
         scene.scaleMode = .aspectFit
         return scene

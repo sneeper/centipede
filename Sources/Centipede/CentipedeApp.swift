@@ -3,6 +3,9 @@ import SpriteKit
 #if os(macOS)
 import AppKit
 #endif
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// The whole app: a single SwiftUI entry point shared by macOS and iOS that
 /// hosts the SpriteKit `GameScene` in a `SpriteView`. The scene keeps its fixed
@@ -42,24 +45,13 @@ struct GameView: View {
             .ignoresSafeArea()
     }
     #else
-    // On iOS, size the field to the device's safe area so it fills the screen
-    // (and the HUD clears the Dynamic Island / home indicator).
-    @State private var scene: GameScene?
+    // On iOS, size the field to the full screen aspect so it fills the display
+    // (HUD sits in the corners, clear of the centered Dynamic Island).
+    @State private var scene: GameScene = GameScene.makeFilling(viewSize: UIScreen.main.bounds.size)
 
     var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()       // fill the notch / home-indicator insets
-            GeometryReader { geo in
-                Group {
-                    if let scene {
-                        SpriteView(scene: scene)
-                    }
-                }
-                .onAppear {
-                    if scene == nil { scene = GameScene.makeFilling(viewSize: geo.size) }
-                }
-            }
-        }
+        SpriteView(scene: scene)
+            .ignoresSafeArea()
     }
     #endif
 }
