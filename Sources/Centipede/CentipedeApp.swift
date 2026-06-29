@@ -45,8 +45,7 @@ struct GameView: View {
             .ignoresSafeArea()
     }
     #else
-    // On iOS, size the field to the full screen aspect so it fills the display
-    // (HUD sits in the corners, clear of the centered Dynamic Island).
+    // On iOS, size the field to the full screen aspect so it fills the display.
     @State private var scene: GameScene = GameScene.makeFilling(viewSize: UIScreen.main.bounds.size)
 
     var body: some View {

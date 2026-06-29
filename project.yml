@@ -41,10 +41,10 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Centipede
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.games
-        # iOS: portrait, no status bar (matches the portrait playfield).
+        # iOS: hidden status bar. (Orientation is intentionally left unrestricted —
+        # iOS 26 wants all orientations supported; the scene scales to any size.)
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIStatusBarHidden: YES
-        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         CODE_SIGN_STYLE: Automatic
 
 schemes:
